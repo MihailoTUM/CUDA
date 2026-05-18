@@ -1,10 +1,15 @@
 #include <iostream>
 #include <random>
+#include <functional>
 
 class Tensor {
     int rows;
     int cols;
+
     float* data;
+    float* grads;
+
+    std::function<void(float*)> _function;
 
     Tensor* parent1;
     Tensor* parent2;
@@ -51,7 +56,14 @@ class Tensor {
         return parent2;
     }
 
-    Tensor* add(Tensor* &tensor) {
+    std::function<void(float*)> _addFunction(Tensor* parent1, Tensor* parent2) {
+        return [parent1, parent2](float* grads) {
+            parent1->grads = grads;
+            parent2->grads = grads;
+        };
+    }
+
+    Tensor* add(Tensor* tensor) {
         if(rows != tensor->rows || cols != tensor->cols) {
             throw std::invalid_argument("Invalid shape!");
         };
@@ -59,6 +71,8 @@ class Tensor {
         Tensor* result = new Tensor(rows, cols);
         result->parent1 = this;
         result->parent2 = tensor;
+
+        result->_function = _addFunction(this, tensor);
 
         for(int i = 0; i < rows * cols; i++) {
             result->data[i] = data[i] + tensor->data[i];
@@ -188,8 +202,88 @@ class Tensor {
         return result;
     };
 
-    Tensor* sum();
-    Tensor *mean();
+    Tensor* sum(int axis) {
+        if(axis != 0 && axis != 1) {
+            throw std::invalid_argument("Invalid axis");
+        };
+
+        // (3, 2) -> (3, 1) axis == 0
+        // (3, 2) -> (1, 2) axis == 0
+
+        if(axis == 0) {
+            Tensor* result = new Tensor(rows, 1);
+            float rowSum = 0;
+
+            for(int i = 0; i < rows; i++) {
+                rowSum = 0;
+
+                for(int j = 0; j < cols; j++) {
+                    rowSum += data[i * cols + j];
+                };
+
+                result->data[i] = rowSum;
+            };
+
+            return result;
+        }
+
+        Tensor* result = new Tensor(1, cols);
+        float colSum = 0;
+
+        for(int j = 0; j < cols; j++) {
+            colSum = 0;
+
+            for(int i = 0; i < rows; i++) {
+                colSum += data[i * cols + j];
+            };
+
+            result->data[j] = colSum;
+        };
+        return result;
+    };
+
+    Tensor* mean(int axis) {
+        if(axis != 0 && axis != 1) {
+            throw std::invalid_argument("Invalid axis");
+        };
+
+        float meanValue = 0;
+
+        if(axis == 0) {
+            Tensor* result = new Tensor(rows, 1);
+
+            for(int i = 0; i < rows; i++) {
+                meanValue = 0;
+
+                for(int j = 0; j < cols; j++) {
+                    meanValue += data[i * cols + j];
+                };
+                result->data[i] = meanValue / cols;
+            };
+            return result;
+        };
+
+        Tensor* result = new Tensor(1, cols);
+
+        for(int j = 0; j < cols; j++) {
+            meanValue = 0;
+
+            for(int i = 0; i < rows; i++) {
+                meanValue += data[i * cols + j];
+            };
+            result->data[j] = meanValue / rows;
+        };
+
+        return result;
+    };    
+
+    void backward();
+
+    void setGrads();
+
+    void updateParameters();
+
+    void getParameters();
 
     void print() {
         std::cout << "" << std::endl;
@@ -202,6 +296,8 @@ class Tensor {
     };
 };
 
+
+
 int main() {
     Tensor* test = new Tensor(3, 3);
     test->ToRandom();
@@ -210,11 +306,13 @@ int main() {
     Tensor* t = test->scale(2.0);
     t->print();
 
-    Tensor* m = t->max(0);
-    m->print();
+    Tensor* mean1 = t->mean(0);
+    mean1->print();
 
-    Tensor* m2 = t->max(1);
+    Tensor* m2 = t->mean(1);
     m2->print();
+
+
 
     return 0;
 };
