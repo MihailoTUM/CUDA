@@ -1,5 +1,6 @@
 #include "Matrix.h"
 #include <functional>
+#include <set>
 
 #ifndef TENSOR_H
 #define TENSOR_H
@@ -29,7 +30,8 @@ class Tensor {
         Tensor* operator*(Tensor* tensor);
 
         void backward();
-
+        void createTree(Tensor* tensor, std::set<Tensor*>& visited);
+        bool inVisited(Tensor* tensor, std::set<Tensor*>& visited);
 };
 
 #endif

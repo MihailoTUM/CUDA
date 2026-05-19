@@ -2,6 +2,8 @@
 #include <random>
 #include "Tensor.h"
 #include "Matrix.h"
+#include <set>
+#include <vector>
 
 Tensor::Tensor(int nRows, int nCols) {
     data = new Matrix(nRows, nCols);
@@ -55,6 +57,25 @@ Tensor* Tensor::operator+(Tensor* tensor) {
     return result;
 };
 
+bool Tensor::inVisited(Tensor* tensor, std::set<Tensor*>& visited) {
+    if(auto search = visited.find(tensor); search != visited.end()) {
+        return true;
+    };
+    return false;
+};
+
+void Tensor::createTree(Tensor* tensor, std::set<Tensor*>& visited) {
+    if(tensor->getParent1() != nullptr && !inVisited(tensor->getParent1(), visited)) {
+        visited.insert(tensor);
+        createTree(tensor->getParent1(), visited);
+    };
+    // parent2
+    // add to tree after parent2 checked
+};
+
 void Tensor::backward() {
+    std::set<Tensor*> visited;
+    std::vector<Tensor*> tree;
+
 
 };
